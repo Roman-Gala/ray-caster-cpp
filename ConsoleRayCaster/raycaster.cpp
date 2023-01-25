@@ -6,14 +6,19 @@
 using namespace std;
 
 int main() {
-	ConsoleEngine game(250, 100);
+	ConsoleEngine game(250, 80);
 
-	int x = 1000000;
-	while (x) {
-		game.camRotation();
-		game.calcRays();
-		game.writeConsole();
-		Sleep(5);
+	bool run = true;
+	while (run) {
+		try {
+			game.camMovement();
+			game.calcRays();
+			game.writeConsole();
+			Sleep(1);
+		}
+		catch (EndGame) {
+			run = false;
+		}
 	}
 	return 0;
 }

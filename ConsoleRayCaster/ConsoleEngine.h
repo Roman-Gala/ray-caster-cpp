@@ -9,6 +9,10 @@ using namespace std;
 
 #define MAP_SIZE 20
 
+class EndGame : public exception {
+	const char* what() { return "Quit."; }
+};
+
 class ConsoleEngine {
 protected:
 	// Screen
@@ -31,11 +35,12 @@ protected:
 public:
 	ConsoleEngine() : ConsoleEngine(100, 30) {}
 	ConsoleEngine(int width, int height);
+	~ConsoleEngine() { delete screenBuffer; }
 
 	void writeConsole();
 	void calcRays();
 	void initMap();
-	void camRotation();
+	void camMovement();
 };
 
 ConsoleEngine::ConsoleEngine(int width, int height) {
@@ -55,6 +60,7 @@ ConsoleEngine::ConsoleEngine(int width, int height) {
 	consoleHandle = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
 	SetConsoleActiveScreenBuffer(consoleHandle);
 	bytesWritten = 0;
+	SetConsoleTitle(L"Ray Caster");
 }
 
 void ConsoleEngine::writeConsole() {
@@ -62,7 +68,7 @@ void ConsoleEngine::writeConsole() {
 	WriteConsoleOutputCharacter(consoleHandle, screenBuffer, screenWidth * screenHeight, { 0,0 }, &bytesWritten);
 }
 
-void ConsoleEngine::camRotation() {
+void ConsoleEngine::camMovement() {
 	float moVec[2];
 	if (GetAsyncKeyState((unsigned short)'A') & 0x8000) {
 		camAng -= 0.02f;
@@ -81,6 +87,9 @@ void ConsoleEngine::camRotation() {
 		moVec[1] = cosf(camAng) * 0.04f;
 		camX -= moVec[0];
 		camY -= moVec[1];
+	}
+	if (GetAsyncKeyState((unsigned short)'Q') & 0x8000) {
+		throw EndGame();
 	}
 }
 
@@ -116,65 +125,65 @@ void ConsoleEngine::calcRays() {
 		}
 
 		distance = distance * cosf(fabs(camAng - rayAng));
-		perspective = (int)(screenHeight / 2.0f - screenHeight / (float)distance);
+		perspective = (int)(screenHeight / 2.0f - screenHeight / (float)distance * 2.0f);
 		for (int j = 0; j < screenHeight; j++) {
 			if (j < perspective || j > screenHeight - perspective) {
 				screenBuffer[j * screenWidth + i] = ' ';
 			}
 			else {
 				if (distance < 2) {
-					screenBuffer[j * screenWidth + i] = '@';
+					screenBuffer[j * screenWidth + i] = '@';//@
 				}
 				else if (distance < 3) {
-					screenBuffer[j * screenWidth + i] = '&';
+					screenBuffer[j * screenWidth + i] = '&';//&
 				}
 				else if (distance < 4) {
-					screenBuffer[j * screenWidth + i] = 'W';
+					screenBuffer[j * screenWidth + i] = 'W';//W
 				}
 				else if (distance < 5) {
-					screenBuffer[j * screenWidth + i] = '0';//W
+					screenBuffer[j * screenWidth + i] = '0';//0
 				}
 				else if (distance < 6) {
-					screenBuffer[j * screenWidth + i] = '$';//0
+					screenBuffer[j * screenWidth + i] = '$';//$
 				}
 				else if (distance < 7) {
-					screenBuffer[j * screenWidth + i] = '%';//#
+					screenBuffer[j * screenWidth + i] = '%';//%
 				}
 				else if (distance < 8) {
-					screenBuffer[j * screenWidth + i] = '8';//B
+					screenBuffer[j * screenWidth + i] = '8';//8
 				}
 				else if (distance < 9) {
-					screenBuffer[j * screenWidth + i] = 'B';//8
+					screenBuffer[j * screenWidth + i] = 'B';//B
 				}
 				else if (distance < 10) {
-					screenBuffer[j * screenWidth + i] = '#';//%
+					screenBuffer[j * screenWidth + i] = '#';//#
 				}
 				else if (distance < 11) {
-					screenBuffer[j * screenWidth + i] = 'm';
+					screenBuffer[j * screenWidth + i] = 'm';//m
 				}
 				else if (distance < 12) {
-					screenBuffer[j * screenWidth + i] = 'a';
+					screenBuffer[j * screenWidth + i] = 'a';//a
 				}
 				else if (distance < 13) {
-					screenBuffer[j * screenWidth + i] = 'o';
+					screenBuffer[j * screenWidth + i] = 'o';//o
 				}
 				else if (distance < 14) {
-					screenBuffer[j * screenWidth + i] = 'c';
+					screenBuffer[j * screenWidth + i] = 'c';//c
 				}
 				else if (distance < 15) {
-					screenBuffer[j * screenWidth + i] = ':';
+					screenBuffer[j * screenWidth + i] = ':';//:
 				}
 				else if (distance < 16) {
-					screenBuffer[j * screenWidth + i] = '"';
+					screenBuffer[j * screenWidth + i] = '"';//"
 				}
 				else if (distance < 17) {
-					screenBuffer[j * screenWidth + i] = '\'';
+					screenBuffer[j * screenWidth + i] = '\'';//'
 				}
 				else if (distance < 18) {
-					screenBuffer[j * screenWidth + i] = '\'';
+					screenBuffer[j * screenWidth + i] = '\'';//'
 				}
 				else {
-					screenBuffer[j * screenWidth + i] = '\.';
+					screenBuffer[j * screenWidth + i] = '.';//.
 				}
 			}
 		}
@@ -189,16 +198,16 @@ void ConsoleEngine::initMap() {
 	map += L"O                  O";
 	map += L"O                  O";
 	map += L"OOOOOOO     OOOOOOOO";
-	map += L"O     O            O";
-	map += L"O     O            O";
-	map += L"O     O            O";
-	map += L"O     O            O";
-	map += L"O     OOOOOOOO     O";
-	map += L"O            O     O";
-	map += L"OOOOOOOOOOOOOO     O";
 	map += L"O                  O";
 	map += L"O                  O";
 	map += L"O                  O";
+	map += L"O                  O";
+	map += L"O           O      O";
+	map += L"O                  O";
+	map += L"O                  O";
+	map += L"O    O             O";
+	map += L"O                  O";
+	map += L"O           O      O";
 	map += L"O                  O";
 	map += L"O                  O";
 	map += L"O                  O";
