@@ -8,9 +8,15 @@
 using namespace std;
 
 #define MAP_SIZE 20
+#define KEY_W 0x57
+#define KEY_S 0x53
+#define KEY_Q 0x51
+#define KEY_A 0x41
+#define KEY_D 0x44
 
 class EndGame : public exception {
-	const char* what() { return "Quit."; }
+public:
+	static const char* what() { return "Quit."; }
 };
 
 class ConsoleEngine {
@@ -32,16 +38,42 @@ protected:
 	// Map
 	wstring map;
 
+	// Fading
+	static const char fade[21];
+
 public:
+	// Constructors, destructor
 	ConsoleEngine() : ConsoleEngine(100, 30) {}
 	ConsoleEngine(int width, int height);
 	~ConsoleEngine() { delete screenBuffer; }
 
+	// Run the engine
+	void runEngine();
+
+	// Renderin and calculation
 	void writeConsole();
 	void calcRays();
+
+	// Init
 	void initMap();
+	void initMap(wstring loadMap) { initMap(); }               // Not implemented
+
+	// Movement
 	void camMovement();
+	void moveFor(float (&moVec)[2]);
+	void moveBack(float (&moVec)[2]);
+	void moveLeft(float (&moVec)[2]);
+	void moveRight(float (&moVec)[2]);
 };
+
+// --- Fading ---
+const char ConsoleEngine::fade[21] = { '@', '@', '@', '&', 'W', '0', '$', '%', '8', 'B', '#',
+'m', 'a', 'o', 'c', ':', '"', '\'', '\'', '.', '.' };
+
+
+// ========================== DEFINITIONS ==============================
+
+// --- Constructors ---
 
 ConsoleEngine::ConsoleEngine(int width, int height) {
 	// Init members
@@ -63,34 +95,29 @@ ConsoleEngine::ConsoleEngine(int width, int height) {
 	SetConsoleTitle(L"Ray Caster");
 }
 
-void ConsoleEngine::writeConsole() {
-	screenBuffer[screenWidth * screenHeight - 1] = '\0';         // Escape character at the end
-	WriteConsoleOutputCharacter(consoleHandle, screenBuffer, screenWidth * screenHeight, { 0,0 }, &bytesWritten);
+// --- Run the engine ---
+
+void ConsoleEngine::runEngine() {
+	bool run = true;
+	while (run) {
+		try {
+			camMovement();
+			calcRays();
+			writeConsole();
+			Sleep(1);
+		}
+		catch (EndGame exc) {
+			cout << exc.what();
+			run = false;
+		}
+	}
 }
 
-void ConsoleEngine::camMovement() {
-	float moVec[2];
-	if (GetAsyncKeyState((unsigned short)'A') & 0x8000) {
-		camAng -= 0.02f;
-	}
-	if (GetAsyncKeyState((unsigned short)'D') & 0x8000) {
-		camAng += 0.02f;
-	}
-	if (GetAsyncKeyState((unsigned short)'W') & 0x8000) {
-		moVec[0] = sinf(camAng) * 0.04f;
-		moVec[1] = cosf(camAng) * 0.04f;
-		camX += moVec[0];
-		camY += moVec[1];
-	}
-	if (GetAsyncKeyState((unsigned short)'S') & 0x8000) {
-		moVec[0] = sinf(camAng) * 0.04f;
-		moVec[1] = cosf(camAng) * 0.04f;
-		camX -= moVec[0];
-		camY -= moVec[1];
-	}
-	if (GetAsyncKeyState((unsigned short)'Q') & 0x8000) {
-		throw EndGame();
-	}
+// --- Rendering and calculation ---
+
+void ConsoleEngine::writeConsole() {
+	//screenBuffer[screenWidth * screenHeight - 1] = '\0';         // Escape character at the end
+	WriteConsoleOutputCharacter(consoleHandle, screenBuffer, screenWidth * screenHeight, { 0,0 }, &bytesWritten);
 }
 
 void ConsoleEngine::calcRays() {
@@ -107,89 +134,106 @@ void ConsoleEngine::calcRays() {
 		testVect[1] = cosf(rayAng);
 		distance = 0;
 		hit = false;
-
+		
 		while (!hit && distance <= renderDistance) {
 			distance += 0.01f;
-			test[0] = (int)(camX + testVect[0] * distance);
-			test[1] = (int)(camY + testVect[1] * distance);
+			test[0] = (camX + testVect[0] * distance);
+			test[1] = (camY + testVect[1] * distance);
 
-			if (test[0] < 0 || test[0] >= MAP_SIZE || test[1] < 0 || test[1] >= MAP_SIZE) {
+			if (map[MAP_SIZE * test[1] + test[0]] == 'O') {
 				hit = true;
-				distance = renderDistance;
-			}
-			else {
-				if (map[MAP_SIZE * test[1] + test[0]] == 'O') {
-					hit = true;
-				}
 			}
 		}
 
-		distance = distance * cosf(fabs(camAng - rayAng));
-		perspective = (int)(screenHeight / 2.0f - screenHeight / (float)distance * 2.0f);
-		for (int j = 0; j < screenHeight; j++) {
-			if (j < perspective || j > screenHeight - perspective) {
-				screenBuffer[j * screenWidth + i] = ' ';
-			}
-			else {
-				if (distance < 2) {
-					screenBuffer[j * screenWidth + i] = '@';//@
-				}
-				else if (distance < 3) {
-					screenBuffer[j * screenWidth + i] = '&';//&
-				}
-				else if (distance < 4) {
-					screenBuffer[j * screenWidth + i] = 'W';//W
-				}
-				else if (distance < 5) {
-					screenBuffer[j * screenWidth + i] = '0';//0
-				}
-				else if (distance < 6) {
-					screenBuffer[j * screenWidth + i] = '$';//$
-				}
-				else if (distance < 7) {
-					screenBuffer[j * screenWidth + i] = '%';//%
-				}
-				else if (distance < 8) {
-					screenBuffer[j * screenWidth + i] = '8';//8
-				}
-				else if (distance < 9) {
-					screenBuffer[j * screenWidth + i] = 'B';//B
-				}
-				else if (distance < 10) {
-					screenBuffer[j * screenWidth + i] = '#';//#
-				}
-				else if (distance < 11) {
-					screenBuffer[j * screenWidth + i] = 'm';//m
-				}
-				else if (distance < 12) {
-					screenBuffer[j * screenWidth + i] = 'a';//a
-				}
-				else if (distance < 13) {
-					screenBuffer[j * screenWidth + i] = 'o';//o
-				}
-				else if (distance < 14) {
-					screenBuffer[j * screenWidth + i] = 'c';//c
-				}
-				else if (distance < 15) {
-					screenBuffer[j * screenWidth + i] = ':';//:
-				}
-				else if (distance < 16) {
-					screenBuffer[j * screenWidth + i] = '"';//"
-				}
-				else if (distance < 17) {
-					screenBuffer[j * screenWidth + i] = '\'';//'
-				}
-				else if (distance < 18) {
-					screenBuffer[j * screenWidth + i] = '\'';//'
+		if (hit) {
+			// Compensate for fisheye effect
+			distance = distance * cosf(fabs(camAng - rayAng));
+			// Calculate the perspective difference
+			perspective = (int)(screenHeight / 2.0f - screenHeight / (float)distance * 2.0f);
+			// Fill buffer column
+			for (int j = 0; j < screenHeight; j++) {
+				if (j < perspective || j > screenHeight - perspective) {
+					screenBuffer[j * screenWidth + i] = ' ';
 				}
 				else {
-					screenBuffer[j * screenWidth + i] = '.';//.
+					screenBuffer[j * screenWidth + i] = fade[(int)distance];
 				}
+			}
+		}
+		else {
+			// Fill buffer column with spaces
+			for (int j = 0; j < screenHeight; j++) {
+				screenBuffer[j * screenWidth + i] = ' ';
 			}
 		}
 	}
-
 }
+
+// --- Movement ---
+
+void ConsoleEngine::camMovement() {
+	// Check key input and boundries
+	float moVec[2];
+	if (GetAsyncKeyState(VK_LEFT)) {
+		camAng -= 0.02f;
+	}
+	if (GetAsyncKeyState(VK_RIGHT)) {
+		camAng += 0.02f;
+	}
+	if (GetAsyncKeyState(KEY_W)) {
+		moveFor(moVec);
+	}
+	if (GetAsyncKeyState(KEY_S)) {
+		moveBack(moVec);
+	}
+	if (GetAsyncKeyState(KEY_A)) {
+		moveLeft(moVec);
+	}
+	if (GetAsyncKeyState(KEY_D)) {
+		moveRight(moVec);
+	}
+	if (GetAsyncKeyState(KEY_Q)) {
+		throw EndGame();
+	}
+}
+
+void ConsoleEngine::moveFor(float (&moVec)[2]) {
+	moVec[0] = sinf(camAng) * 0.04f;
+	moVec[1] = cosf(camAng) * 0.04f;
+	if (map[(int)round(camY + moVec[1]) * MAP_SIZE + (int)round(camX + moVec[0])] != 'O') {
+		camX += moVec[0];
+		camY += moVec[1];
+	}
+}
+
+void ConsoleEngine::moveBack(float(&moVec)[2]) {
+	moVec[0] = sinf(camAng) * 0.04f;
+	moVec[1] = cosf(camAng) * 0.04f;
+	if (map[(int)round(camY - moVec[1]) * MAP_SIZE + (int)round(camX - moVec[0])] != 'O') {
+		camX -= moVec[0];
+		camY -= moVec[1];
+	}
+}
+
+void ConsoleEngine::moveLeft(float(&moVec)[2]) {
+	moVec[0] = cosf(camAng) * 0.04f;
+	moVec[1] = -sinf(camAng) * 0.04f;
+	if (map[(int)round(camY - moVec[1]) * MAP_SIZE + (int)round(camX - moVec[0])] != 'O') {
+		camX -= moVec[0];
+		camY -= moVec[1];
+	}
+}
+
+void ConsoleEngine::moveRight(float(&moVec)[2]) {
+	moVec[0] = cosf(camAng) * 0.04f;
+	moVec[1] = -sinf(camAng) * 0.04f;
+	if (map[(int)round(camY + moVec[1]) * MAP_SIZE + (int)round(camX + moVec[0])] != 'O') {
+		camX += moVec[0];
+		camY += moVec[1];
+	}
+}
+
+// --- Init ---
 
 void ConsoleEngine::initMap() {
 	map += L"OOOOOOOOOOOOOOOOOOOO";
