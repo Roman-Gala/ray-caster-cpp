@@ -8,3 +8,6 @@ on the camera's position and orientation.
 To create the 3D-like representation, the program uses a grid-based map that defines the walls and objects in the virtual environment. The program calculates the
 distance from the camera to each point on the screen using raycasting, and then maps each point to an ASCII character to create a pseudo-3D effect. The result is a
 visually impressive and interactive representation of the virtual environment.
+
+![image](https://user-images.githubusercontent.com/92608673/225667767-dbd8f54a-3bfe-44ad-9137-8330cf29e80f.png)
+
